@@ -1,8 +1,9 @@
-import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import ExploreView from '../views/ExploreView.vue'
 import PricingView from '../views/PricingView.vue'
 import BuTCheck from "@/views/BuTCheck.vue";
+
 
 const routes: Array<RouteRecordRaw> = [
     {
@@ -16,18 +17,19 @@ const routes: Array<RouteRecordRaw> = [
         component: ExploreView
     },
     {
-        path: '/pricing', // <-- NEU
+        path: '/pricing',
         name: 'pricing',
         component: PricingView
     },
-    { path: '/but',
+    {
+        path: '/but',
         name: 'but',
-        component: BuTCheck }
-
+        component: BuTCheck
+    }
 ]
 
 const router = createRouter({
-    history: createWebHistory(),
+    history: createWebHashHistory(import.meta.env.BASE_URL),
     routes
 })
 
