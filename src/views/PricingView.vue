@@ -44,7 +44,7 @@ const plans: Plan[] = [
     id: 'aktiv',
     name: 'Aktiv',
     tagline: 'Die Sport-Flatrate für deine Familie',
-    priceMonthly: 19,
+    priceMonthly: 39.99,
     priceYearly: 190,
     checkins: '4 Check-ins / Monat',
     cta: 'Aktiv-Abo wählen',
@@ -63,7 +63,7 @@ const plans: Plan[] = [
     id: 'familie',
     name: 'Familie+',
     tagline: 'Für aktive Familien mit mehreren Kindern',
-    priceMonthly: 29,
+    priceMonthly: 79.99,
     priceYearly: 290,
     checkins: '8 Check-ins / Monat',
     cta: 'Familie+ wählen',
@@ -120,7 +120,7 @@ function monthlyDisplay(p: Plan): number {
             :class="billing === 'yearly' ? 'bg-brand-700 text-white' : 'text-muted hover:text-ink'"
         >
           Jährlich
-          <span class="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">−2 Monate</span>
+          <span class="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">−1 Monat</span>
         </button>
       </div>
     </div>
@@ -155,7 +155,7 @@ function monthlyDisplay(p: Plan): number {
         </div>
         <p class="text-xs text-muted min-h-[1rem]">
           <template v-if="plan.priceMonthly === 0">Dauerhaft kostenlos</template>
-          <template v-else-if="billing === 'yearly'">{{ euro(plan.priceYearly) }} € pro Jahr · 2 Monate geschenkt</template>
+          <template v-else-if="billing === 'yearly'">{{ euro(plan.priceYearly) }} € pro Jahr · 1 Monat geschenkt</template>
           <template v-else>Monatlich kündbar</template>
         </p>
 

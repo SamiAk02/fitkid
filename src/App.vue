@@ -45,6 +45,14 @@
               💳 Abos
             </router-link>
 
+            <router-link
+                to="/meine-buchungen"
+                class="px-4 py-2 rounded-xl text-sm font-semibold text-decoration-none"
+                :class="isActive('/meine-buchungen') ? 'bg-brand-50 text-brand-500' : 'text-muted hover:bg-surface-muted'"
+            >
+              📅 Buchungen
+            </router-link>
+
           </nav>
         </div>
       </header>
