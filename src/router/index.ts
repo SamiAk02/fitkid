@@ -4,10 +4,9 @@ import ExploreView from '../views/ExploreView.vue'
 import PricingView from '../views/PricingView.vue'
 import BuTCheck from "@/views/BuTCheck.vue";
 import AuthView from "@/views/AuthView.vue";
-import { supabase } from '@/lib/supabaseClient'
+import MeineBuchungen from "@/views/MeineBuchungen.vue";
+import { supabase } from '../lib/supabaseClient'
 
-// @ts-ignore
-// @ts-ignore
 const routes: Array<RouteRecordRaw> = [
     {
         path: '/login',
@@ -37,8 +36,7 @@ const routes: Array<RouteRecordRaw> = [
     {
         path: '/meine-buchungen',
         name: 'meine-buchungen',
-        component: () => import('@/views/MeineBuchungen.vue'),
-        meta: { requiresAuth: true }
+        component: MeineBuchungen
     }
 ]
 
@@ -48,14 +46,17 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to, from, next) => {
-    if (to.meta.requiresAuth) {
-        const { data } = await supabase.auth.getSession()
-        if (!data.session) {
-            next({ name: 'login' })
-            return
-        }
+    if (to.name === 'login') {
+        next()
+        return
     }
-    next()
+
+    const { data } = await supabase.auth.getSession()
+    if (!data.session) {
+        next({ name: 'login' })
+    } else {
+        next()
+    }
 })
 
 export default router
