@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { categories, type Course } from '../../data/courses'
-import { supabase } from '../../lib/supabaseClient'
+import { categories, type Course } from '@/data/courses'
+import { supabase } from '@/lib/supabaseClient'
 import StarRating from './StarRating.vue'
 
 const props = defineProps<{ course: Course }>()
