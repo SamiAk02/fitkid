@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { supabase } from '../lib/supabaseClient'
 
 type Billing = 'monthly' | 'yearly'
 
@@ -20,6 +21,11 @@ interface Plan {
 
 const router = useRouter()
 const billing = ref<Billing>('monthly')
+const selectedPlan = ref<string | null>(null)
+const referralCode = ref('')
+const referralDiscount = ref(0)
+const referralCopied = ref(false)
+const loadingProfile = ref(true)
 
 const plans: Plan[] = [
   {
@@ -45,13 +51,13 @@ const plans: Plan[] = [
     name: 'Aktiv',
     tagline: 'Die Sport-Flatrate für deine Familie',
     priceMonthly: 39.99,
-    priceYearly: 190,
+    priceYearly: 439.89,
     checkins: '4 Check-ins / Monat',
     cta: 'Aktiv-Abo wählen',
     highlight: true,
     badge: 'Beliebt',
     features: [
-      { text: 'Alles aus „Entdecken“', included: true },
+      { text: 'Alles aus „Entdecken"', included: true },
       { text: '4 Inklusiv-Check-ins pro Monat', included: true },
       { text: 'Max. 4× pro Anbieter / Monat', included: true },
       { text: 'Prioritäts-Buchung – keine Warteliste', included: true },
@@ -64,12 +70,12 @@ const plans: Plan[] = [
     name: 'Familie+',
     tagline: 'Für aktive Familien mit mehreren Kindern',
     priceMonthly: 79.99,
-    priceYearly: 290,
+    priceYearly: 879.89,
     checkins: '8 Check-ins / Monat',
     cta: 'Familie+ wählen',
     highlight: false,
     features: [
-      { text: 'Alles aus „Aktiv“', included: true },
+      { text: 'Alles aus „Aktiv"', included: true },
       { text: '8 Inklusiv-Check-ins pro Monat', included: true },
       { text: 'Max. 8× pro Anbieter / Monat', included: true },
       { text: 'Bis zu 5 Kinderprofile', included: true },
@@ -87,9 +93,49 @@ function euro(n: number): string {
 }
 
 function monthlyDisplay(p: Plan): number {
-  if (billing.value === 'monthly') return p.priceMonthly
-  return Math.round((p.priceYearly / 12) * 100) / 100
+  let price = billing.value === 'monthly' ? p.priceMonthly : Math.round((p.priceYearly / 12) * 100) / 100
+  if (referralDiscount.value > 0 && p.priceMonthly > 0) {
+    price = price * (1 - referralDiscount.value / 100)
+    price = Math.round(price * 100) / 100
+  }
+  return price
 }
+
+const referralLink = computed(() => {
+  if (!referralCode.value) return ''
+  return `${window.location.origin}${window.location.pathname}#/login?ref=${referralCode.value}`
+})
+
+async function copyReferralLink() {
+  if (!referralLink.value) return
+  await navigator.clipboard.writeText(referralLink.value)
+  referralCopied.value = true
+  setTimeout(() => referralCopied.value = false, 2000)
+}
+
+function selectPlan(planId: string) {
+  selectedPlan.value = planId
+}
+
+async function loadProfile() {
+  loadingProfile.value = true
+  const { data: userData } = await supabase.auth.getUser()
+  if (!userData.user) return
+
+  const { data } = await supabase
+      .from('profiles')
+      .select('referral_code, referral_discount_percent')
+      .eq('id', userData.user.id)
+      .maybeSingle()
+
+  if (data) {
+    referralCode.value = data.referral_code ?? ''
+    referralDiscount.value = data.referral_discount_percent ?? 0
+  }
+  loadingProfile.value = false
+}
+
+onMounted(loadProfile)
 </script>
 
 <template>
@@ -103,6 +149,18 @@ function monthlyDisplay(p: Plan): number {
         Suchen und der BuT-Lotse sind und bleiben kostenlos.
       </p>
     </header>
+
+    <!-- Rabatt-Banner -->
+    <div
+        v-if="referralDiscount > 0"
+        class="max-w-3xl mx-auto rounded-card bg-emerald-50 border border-emerald-200 px-5 py-4 flex items-center gap-3"
+    >
+      <span class="text-2xl">🎉</span>
+      <div>
+        <p class="font-bold text-emerald-800">Du hast {{ referralDiscount }}% Empfehlungsrabatt!</p>
+        <p class="text-sm text-emerald-700">Dein Rabatt wird automatisch auf alle Abo-Preise angerechnet.</p>
+      </div>
+    </div>
 
     <!-- Abrechnungs-Umschalter -->
     <div class="flex justify-center">
@@ -130,8 +188,12 @@ function monthlyDisplay(p: Plan): number {
       <div
           v-for="plan in plans"
           :key="plan.id"
-          class="relative h-full flex flex-col bg-surface border rounded-card p-6 shadow-sm transition-all"
-          :class="plan.highlight ? 'border-brand-500 ring-2 ring-brand-500 md:scale-[1.03]' : 'border-line'"
+          class="relative h-full flex flex-col bg-surface border rounded-card p-6 shadow-sm transition-all cursor-pointer"
+          :class="[
+          plan.highlight ? 'border-brand-500 ring-2 ring-brand-500 md:scale-[1.03]' : 'border-line',
+          selectedPlan === plan.id ? 'ring-2 ring-emerald-500 border-emerald-500' : ''
+        ]"
+          @click="selectPlan(plan.id)"
       >
         <span
             v-if="plan.badge"
@@ -139,6 +201,10 @@ function monthlyDisplay(p: Plan): number {
         >
           ⭐ {{ plan.badge }}
         </span>
+
+        <div v-if="selectedPlan === plan.id" class="absolute top-3 right-3 text-emerald-600 font-bold text-xs bg-emerald-50 px-2 py-1 rounded-full border border-emerald-200">
+          ✓ Ausgewählt
+        </div>
 
         <h3 class="font-extrabold text-ink text-lg">{{ plan.name }}</h3>
         <p class="text-sm text-muted mt-1 min-h-[2.5rem]">{{ plan.tagline }}</p>
@@ -151,6 +217,9 @@ function monthlyDisplay(p: Plan): number {
           <template v-else>
             <span class="text-4xl font-black text-ink">{{ euro(monthlyDisplay(plan)) }} €</span>
             <span class="text-muted text-sm font-medium">/ Monat</span>
+            <span v-if="referralDiscount > 0" class="ml-2 text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+              −{{ referralDiscount }}% Rabatt
+            </span>
           </template>
         </div>
         <p class="text-xs text-muted min-h-[1rem]">
@@ -159,7 +228,7 @@ function monthlyDisplay(p: Plan): number {
           <template v-else>Monatlich kündbar</template>
         </p>
 
-        <!-- Check-in-Kontingent hervorgehoben -->
+        <!-- Check-in-Kontingent -->
         <div class="mt-4 flex items-center gap-2 text-sm font-semibold text-brand-700 bg-brand-50 rounded-xl px-3 py-2">
           <span>🎟️</span>{{ plan.checkins }}
         </div>
@@ -167,9 +236,14 @@ function monthlyDisplay(p: Plan): number {
         <!-- CTA -->
         <button
             class="mt-5 w-full text-sm font-bold py-3 rounded-xl transition-all"
-            :class="plan.highlight ? 'bg-brand-700 text-white hover:bg-brand-800' : 'bg-surface border border-line text-ink hover:border-brand-500'"
+            :class="selectedPlan === plan.id
+            ? 'bg-emerald-600 text-white'
+            : plan.highlight
+              ? 'bg-brand-700 text-white hover:bg-brand-800'
+              : 'bg-surface border border-line text-ink hover:border-brand-500'"
+            @click.stop="selectPlan(plan.id)"
         >
-          {{ plan.cta }}
+          {{ selectedPlan === plan.id ? '✓ Ausgewählt' : plan.cta }}
         </button>
 
         <!-- Features -->
@@ -184,6 +258,41 @@ function monthlyDisplay(p: Plan): number {
             {{ f.text }}
           </li>
         </ul>
+      </div>
+    </div>
+
+    <!-- Referral-Box -->
+    <div class="max-w-3xl mx-auto rounded-card bg-surface border border-line p-6 space-y-4">
+      <div class="flex items-center gap-3">
+        <span class="text-2xl">🔗</span>
+        <div>
+          <h3 class="font-extrabold text-ink">Freunde einladen, Rabatt kassieren</h3>
+          <p class="text-sm text-muted">Für jede Mama/jeden Papa, die sich über deinen Link anmeldet, bekommst du <strong>+5% Rabatt</strong> auf dein Abo</p>
+        </div>
+      </div>
+
+      <div v-if="loadingProfile" class="text-sm text-muted">Lade Referral-Link…</div>
+      <div v-else class="space-y-3">
+        <div class="flex gap-2">
+          <input
+              :value="referralLink"
+              readonly
+              class="flex-1 bg-mint-bg border border-line rounded-xl px-3 py-2 text-sm text-ink/80 truncate focus:outline-none"
+          />
+          <button
+              @click="copyReferralLink"
+              class="text-sm font-bold px-4 py-2 rounded-xl bg-brand-700 text-white hover:bg-brand-800 transition-all whitespace-nowrap"
+          >
+            {{ referralCopied ? '✓ Kopiert!' : '📋 Kopieren' }}
+          </button>
+        </div>
+
+        <div class="flex items-center gap-3 text-sm">
+          <span class="text-muted">Dein aktueller Empfehlungsrabatt:</span>
+          <span class="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+            {{ referralDiscount > 0 ? `${referralDiscount}% 🎉` : 'Noch kein Rabatt' }}
+          </span>
+        </div>
       </div>
     </div>
 

@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { supabase } from '../lib/supabaseClient'
 
 const router = useRouter()
+const route = useRoute()
 
 const mode = ref<'login' | 'signup'>('login')
 const email = ref('')
@@ -13,9 +14,16 @@ const loading = ref(false)
 const errorMsg = ref('')
 const successMsg = ref('')
 
+// Referral-Code aus URL auslesen (?ref=XXXXX)
+const refCode = ref((route.query.ref as string) ?? '')
+
 function resetMessages() {
   errorMsg.value = ''
   successMsg.value = ''
+}
+
+function generateReferralCode(): string {
+  return Math.random().toString(36).substring(2, 8).toUpperCase()
 }
 
 async function handleSubmit() {
@@ -40,29 +48,35 @@ async function handleSubmit() {
       })
       if (error) throw error
 
-      // Profil anlegen (nur möglich, falls Session direkt vorhanden ist;
-      // bei aktivierter E-Mail-Bestätigung kommt das erst nach Login)
       if (data.user) {
+        // Profil mit zufälligem Referral-Code anlegen
         await supabase.from('profiles').insert({
           id: data.user.id,
           full_name: fullName.value.trim(),
+          referral_code: generateReferralCode(),
         })
+
+        // Falls über Referral-Link registriert, Bonus dem Werber gutschreiben
+        if (refCode.value) {
+          await supabase.rpc('apply_referral', {
+            p_referral_code: refCode.value,
+            p_referred_id: data.user.id,
+          })
+        }
       }
 
       successMsg.value = data.session
           ? 'Konto erstellt! Du bist eingeloggt.'
-          : 'Konto erstellt! Bitte bestätige deine E-Mail-Adresse, bevor du dich einloggst.'
+          : 'Konto erstellt! Bitte bestätige deine E-Mail-Adresse.'
 
-      if (data.session) {
-        router.push('/')
-      }
+      if (data.session) router.push('/')
+
     } else {
       const { error } = await supabase.auth.signInWithPassword({
         email: email.value.trim(),
         password: password.value,
       })
       if (error) throw error
-
       router.push('/')
     }
   } catch (err) {
@@ -97,6 +111,17 @@ function switchMode(newMode: 'login' | 'signup') {
       >
         Registrieren
       </button>
+    </div>
+
+    <!-- Referral-Hinweis falls Link genutzt -->
+    <div v-if="refCode && mode === 'signup'" class="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-sm text-emerald-800 font-semibold">
+      🎉 Du wurdest eingeladen! Nach der Registrierung bekommt dein Freund/deine Freundin 5% Rabatt.
+    </div>
+
+    <!-- Demo-Hinweis -->
+    <div class="bg-mint-bg border border-line rounded-xl px-4 py-3 text-xs text-muted space-y-1">
+      <p class="font-bold text-ink">Demo-Zugang:</p>
+      <p>demo@fitkid.app / Demo2026!</p>
     </div>
 
     <form @submit.prevent="handleSubmit" class="space-y-3">
@@ -141,6 +166,5 @@ function switchMode(newMode: 'login' | 'signup') {
         {{ loading ? '...' : (mode === 'login' ? 'Einloggen' : 'Konto erstellen') }}
       </button>
     </form>
-
   </div>
 </template>

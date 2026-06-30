@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { categories, type Course } from '../../data/courses'
 import { supabase } from '../../lib/supabaseClient'
+import StarRating from './StarRating.vue'
 
 const props = defineProps<{ course: Course }>()
 
@@ -74,7 +75,7 @@ async function confirmBooking() {
   } else {
     isBooked.value = true
     showModal.value = false
-    await loadNextSession() // spots_left neu laden
+    await loadNextSession()
   }
 
   submitting.value = false
@@ -105,12 +106,17 @@ onMounted(loadNextSession)
     <h4 class="font-extrabold text-ink text-base leading-snug tracking-tight">{{ course.title }}</h4>
     <p class="text-sm text-muted mt-0.5">{{ course.club }}</p>
 
+    <!-- Info-Raster -->
     <div class="mt-4 grid grid-cols-2 gap-x-3 gap-y-2 text-sm text-ink/80">
       <p class="flex items-center gap-1.5"><span>🎂</span>{{ course.ageGroup }}</p>
       <p class="flex items-center gap-1.5"><span>🕒</span>{{ course.time }}</p>
       <p class="flex items-center gap-1.5 col-span-2"><span>📍</span>{{ course.address }}</p>
     </div>
 
+    <!-- Sterne-Bewertung -->
+    <StarRating :course-id="course.id" />
+
+    <!-- Footer -->
     <div class="mt-auto pt-5 flex items-end justify-between gap-3">
       <div class="flex flex-col gap-1">
         <span
