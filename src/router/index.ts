@@ -37,7 +37,7 @@ const routes: Array<RouteRecordRaw> = [
     {
         path: '/meine-buchungen',
         name: 'meine-buchungen',
-        component: () => import('../views/MeineBuchungen.vue'),
+        component: () => import('@/views/MeineBuchungen.vue'),
         meta: { requiresAuth: true }
     }
 ]
