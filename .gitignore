@@ -41,4 +41,5 @@ __screenshots__/
 .env
 .env.local
 .env.*.local
+vite.config.js
 
